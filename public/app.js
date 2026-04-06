@@ -65,6 +65,15 @@ async function initApp() {
   empresaId = await getEmpresaId()
   const userData = await getCurrentUser()
 
+  // Guard: si no hay empresaId, mostrar error claro en lugar de queries rotas
+  if (!empresaId) {
+    console.error('No se encontró empresa_id para este usuario. Verifica la tabla usuarios.')
+    const errEl = document.getElementById('login-err')
+    if (errEl) { errEl.style.display = 'block'; errEl.textContent = 'Error: usuario sin empresa asignada. Contacta al administrador.' }
+    await sb.auth.signOut()
+    return
+  }
+
   document.getElementById('auth').classList.add('hidden')
   document.getElementById('app').classList.remove('hidden')
 
@@ -175,20 +184,19 @@ function globalSearch(v) {
 // FETCH HELPERS
 // ═══════════════════════════════════════════
 async function fetchAsesores() {
+  if (!empresaId) return []
   const { data } = await sb.from('asesores').select('*').eq('empresa_id', empresaId).eq('activo', true).order('nombre')
   return data || []
 }
 
 async function fetchClientes(filters = {}) {
+  if (!empresaId) return []
   let q = sb.from('clientes').select(`*, asesores(nombre, iniciales, color, bg_color), cliente_productos(producto)`).eq('empresa_id', empresaId)
   if (filters.estado && filters.estado !== 'todos') q = q.eq('estado', filters.estado)
   if (filters.buscar) q = q.or(`nombre.ilike.%${filters.buscar}%,telefono.ilike.%${filters.buscar}%`)
   q = q.order('created_at', { ascending: false })
- const { data, error } = await q
-if (error) {
-  console.error('Supabase error en fetchClientes:', error)
-  return []
-}
+  const { data, error } = await q
+  if (error) { console.error('fetchClientes error:', error); toast('Error cargando clientes: ' + error.message, 'var(--red)'); return [] }
   return (data || []).map(c => ({
     ...c,
     productos: (c.cliente_productos || []).map(p => p.producto),
@@ -268,7 +276,10 @@ async function loadDashboard() {
     }).join('')
 
     // Top productos
-    const { data: prods } = await sb.from('cliente_productos').select('producto').in('cliente_id', todos.map((_, i) => i).slice(0, 1000))
+    const clienteIds = todos.map(c => c.id).filter(Boolean)
+    const { data: prods } = clienteIds.length
+      ? await sb.from('cliente_productos').select('producto').in('cliente_id', clienteIds.slice(0, 500))
+      : { data: [] }
     const prodCount = {}
     ;(prods || []).forEach(p => { prodCount[p.producto] = (prodCount[p.producto] || 0) + 1 })
     const topProds = Object.entries(prodCount).sort((a, b) => b[1] - a[1]).slice(0, 6)
@@ -289,10 +300,6 @@ async function loadDashboard() {
 // LEADS / CLIENTES
 // ═══════════════════════════════════════════
 async function loadLeads() {
-  if (!empresaId) {
-    console.error('empresaId es null — usuario sin empresa asignada')
-    return
-  }
   document.getElementById('leads-body').innerHTML = '<div class="loading-row"><span class="spinner"></span></div>'
   const data = await fetchClientes({ estado: currentEstado, buscar: currentSearch })
   renderLeadsTable(data)
@@ -631,7 +638,10 @@ async function loadReportes() {
     const n = arr.filter(c => c.estado === k).length
     return `<div class="srow"><span class="sk">${cfg[k].l}</span><span class="sv">${n} (${Math.round(n / total * 100)}%)</span></div>`
   }).join('')
-  const { data: prods } = await sb.from('cliente_productos').select('producto')
+  const clienteIdsRep = arr.map(c => c.id).filter(Boolean)
+  const { data: prods } = clienteIdsRep.length
+    ? await sb.from('cliente_productos').select('producto').in('cliente_id', clienteIdsRep.slice(0, 500))
+    : { data: [] }
   const prodCount = {}
   ;(prods || []).forEach(p => { prodCount[p.producto] = (prodCount[p.producto] || 0) + 1 })
   const topProds = Object.entries(prodCount).sort((a, b) => b[1] - a[1]).slice(0, 6)
@@ -755,8 +765,3 @@ window.openEditAsesor = openEditAsesor
 window.submitEditAsesor = submitEditAsesor
 window.deleteAsesor = deleteAsesor
 window.sendWA = sendWA
-
-// 📲 WHATSAPP
-function wa(t, n) {
-  window.open(`https://wa.me/57${t}?text=Hola ${n}`, '_blank')
-}
