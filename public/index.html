@@ -1,31 +1,56 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<title>Armony CRM</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-<link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <title>Armony CRM</title>
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Supabase -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <!-- Estilos -->
+  <link rel="stylesheet" href="styles.css">
 </head>
+
 <body>
 
-<div id="auth">
+<!-- LOGIN -->
+<div id="auth" class="center">
+
+  <div class="logo">
+    <img src="logo.png" alt="Armony">
+  </div>
+
   <h1>Armony CRM</h1>
+
   <input id="email" placeholder="Email">
   <input id="password" type="password" placeholder="Password">
+
   <button onclick="login()">Ingresar</button>
   <button onclick="register()">Registrarse</button>
+
 </div>
 
-<div id="app" style="display:none;">
+
+<!-- APP -->
+<div id="app" class="hidden">
+
   <div class="topbar">
-    <h2>Dashboard</h2>
-    <button onclick="logout()">Salir</button>
+    <div class="logo">
+      <img src="logo.png" alt="Armony">
+    </div>
+
+    <div>
+      <button onclick="crearCliente()">+ Cliente</button>
+      <button onclick="logout()">Salir</button>
+    </div>
   </div>
 
   <div class="grid">
+
     <div class="card">
       <h3>Clientes</h3>
-      <button onclick="crearCliente()">+ Nuevo</button>
       <ul id="clientes"></ul>
     </div>
 
@@ -33,10 +58,13 @@
       <h3>Métricas</h3>
       <p id="metricas"></p>
     </div>
+
   </div>
+
 </div>
 
 <script src="supabase.js"></script>
 <script src="app.js"></script>
+
 </body>
 </html>
