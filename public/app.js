@@ -61,11 +61,11 @@ async function logout() {
 }
 
 // 🚀 INICIO APP
-async function initApp() {
-  document.getElementById('auth').style.display = 'none'
-  document.getElementById('app').style.display = 'block'
+async function initApp(){
+ document.getElementById('auth').classList.add('hidden')
+ document.getElementById('app').classList.remove('hidden')
+ loadClientes()
 
-  loadClientes()
 }
 
 // 📦 CARGAR CLIENTES (MULTIEMPRESA)
