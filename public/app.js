@@ -1,62 +1,125 @@
-let user=null
+import supabase, { getEmpresaId } from './supabase.js'
 
-async function register(){
- const email=document.getElementById('email').value
- const password=document.getElementById('password').value
+let user = null
 
- const {data,error}=await db.auth.signUp({email,password})
- if(error){alert(error.message);return}
+// 🔐 REGISTRO
+async function register() {
+  const email = document.getElementById('email').value
+  const password = document.getElementById('password').value
 
- alert('Usuario creado')
+  const { data, error } = await supabase.auth.signUp({ email, password })
+
+  if (error) {
+    alert(error.message)
+    return
+  }
+
+  user = data.user
+
+  // 🧠 crear empresa automáticamente
+  const nombreEmpresa = prompt('Nombre de tu empresa')
+
+  const { data: empresa } = await supabase
+    .from('empresas')
+    .insert([{ nombre: nombreEmpresa }])
+    .select()
+    .single()
+
+  // 👤 vincular usuario
+  await supabase.from('usuarios').insert([
+    {
+      id: user.id,
+      email: user.email,
+      empresa_id: empresa.id,
+      rol: 'admin'
+    }
+  ])
+
+  alert('Usuario y empresa creados 🚀')
 }
 
-async function login(){
- const email=document.getElementById('email').value
- const password=document.getElementById('password').value
+// 🔐 LOGIN
+async function login() {
+  const email = document.getElementById('email').value
+  const password = document.getElementById('password').value
 
- const {data,error}=await db.auth.signInWithPassword({email,password})
- if(error){alert('Error');return}
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password })
 
- user=data.user
- initApp()
+  if (error) {
+    alert('Error al iniciar sesión')
+    return
+  }
+
+  user = data.user
+  initApp()
 }
 
-async function logout(){
- await db.auth.signOut()
- location.reload()
+// 🚪 LOGOUT
+async function logout() {
+  await supabase.auth.signOut()
+  location.reload()
 }
 
-async function initApp(){
- document.getElementById('auth').style.display='none'
- document.getElementById('app').style.display='block'
- loadClientes()
+// 🚀 INICIO APP
+async function initApp() {
+  document.getElementById('auth').style.display = 'none'
+  document.getElementById('app').style.display = 'block'
+
+  loadClientes()
 }
 
-async function loadClientes(){
- const {data}=await db.from('clientes').select('*')
- const ul=document.getElementById('clientes')
- ul.innerHTML=''
- let total=data.length
+// 📦 CARGAR CLIENTES (MULTIEMPRESA)
+async function loadClientes() {
+  const empresa_id = await getEmpresaId()
 
- data.forEach(c=>{
-  const li=document.createElement('li')
-  li.innerHTML=`${c.nombre} (${c.estado||'nuevo'}) 
-  <button onclick="wa('${c.telefono}','${c.nombre}')">WA</button>`
-  ul.appendChild(li)
- })
+  const { data, error } = await supabase
+    .from('clientes')
+    .select('*')
+    .eq('empresa_id', empresa_id)
 
- document.getElementById('metricas').innerText="Total clientes: "+total
+  if (error) {
+    alert('Error cargando clientes')
+    return
+  }
+
+  const ul = document.getElementById('clientes')
+  ul.innerHTML = ''
+
+  let total = data.length
+
+  data.forEach(c => {
+    const li = document.createElement('li')
+    li.innerHTML = `
+      ${c.nombre} (${c.estado || 'nuevo'}) 
+      <button onclick="wa('${c.telefono}','${c.nombre}')">WA</button>
+    `
+    ul.appendChild(li)
+  })
+
+  document.getElementById('metricas').innerText = "Total clientes: " + total
 }
 
-async function crearCliente(){
- const nombre=prompt('Nombre')
- const telefono=prompt('Teléfono')
- const estado='nuevo'
+// ➕ CREAR CLIENTE (MULTIEMPRESA)
+async function crearCliente() {
+  const nombre = prompt('Nombre')
+  const telefono = prompt('Teléfono')
+  const estado = 'nuevo'
 
- await db.from('clientes').insert([{nombre,telefono,estado}])
- loadClientes()
+  const empresa_id = await getEmpresaId()
+
+  const { error } = await supabase.from('clientes').insert([
+    { nombre, telefono, estado, empresa_id }
+  ])
+
+  if (error) {
+    alert('Error al crear cliente')
+    return
+  }
+
+  loadClientes()
 }
 
-function wa(t,n){
- window.open(`https://wa.me/57${t}?text=Hola ${n}`,'_blank')
+// 📲 WHATSAPP
+function wa(t, n) {
+  window.open(`https://wa.me/57${t}?text=Hola ${n}`, '_blank')
 }
