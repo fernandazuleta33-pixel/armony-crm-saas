@@ -4,15 +4,21 @@ const SUPABASE_KEY ='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 export const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 export async function getEmpresaId() {
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) return null
-  const { data } = await sb.from('usuarios').select('empresa_id').eq('id', user.id).single()
-  return data?.empresa_id
+  try {
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) return null
+    const { data, error } = await sb.from('usuarios').select('empresa_id').eq('id', user.id).single()
+    if (error) { console.error('getEmpresaId error:', error); return null }
+    return data?.empresa_id ?? null
+  } catch (e) { console.error('getEmpresaId exception:', e); return null }
 }
 
 export async function getCurrentUser() {
-  const { data: { user } } = await sb.auth.getUser()
-  if (!user) return null
-  const { data } = await sb.from('usuarios').select('*').eq('id', user.id).single()
-  return data
+  try {
+    const { data: { user } } = await sb.auth.getUser()
+    if (!user) return null
+    const { data, error } = await sb.from('usuarios').select('*').eq('id', user.id).single()
+    if (error) { console.error('getCurrentUser error:', error); return null }
+    return data
+  } catch (e) { console.error('getCurrentUser exception:', e); return null }
 }
