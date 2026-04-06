@@ -1,7 +1,98 @@
-body{font-family:sans-serif;background:#0f172a;color:white;margin:0}
-#auth{text-align:center;margin-top:100px}
-input,button{margin:5px;padding:10px;border-radius:8px;border:none}
-button{background:#22c55e;color:white;cursor:pointer}
-.topbar{display:flex;justify-content:space-between;padding:10px;background:#020617}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px}
-.card{background:#020617;padding:20px;border-radius:12px}
+/* Reset */
+body{
+  margin:0;
+  font-family: Arial, sans-serif;
+  background:#0f172a;
+  color:#fff;
+}
+
+/* Utilidades */
+.hidden{
+  display:none;
+}
+
+.center{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  flex-direction:column;
+}
+
+/* Logo */
+.logo img{
+  max-width:120px;
+  margin-bottom:10px;
+}
+
+/* Inputs */
+input{
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:6px;
+  width:220px;
+}
+
+/* Botones */
+button{
+  padding:10px 15px;
+  border:none;
+  border-radius:6px;
+  background:#6366f1;
+  color:white;
+  cursor:pointer;
+  margin:5px;
+}
+
+button:hover{
+  background:#4f46e5;
+}
+
+/* Topbar */
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:15px;
+  background:#020617;
+  border-bottom:1px solid #1e293b;
+}
+
+/* Layout */
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+  padding:20px;
+}
+
+/* Cards */
+.card{
+  background:#020617;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 0 10px rgba(0,0,0,0.3);
+}
+
+/* Lista */
+ul{
+  list-style:none;
+  padding:0;
+}
+
+li{
+  background:#1e293b;
+  margin:5px 0;
+  padding:10px;
+  border-radius:6px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.actions button{
+  margin-left:5px;
+  font-size:12px;
+  padding:5px 8px;
+}
