@@ -36,7 +36,7 @@ body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--text);min-
 /* ── SIDEBAR ── */
 .sidebar{width:248px;min-width:248px;background:linear-gradient(180deg,var(--wine-d) 0%,var(--wine) 100%);display:flex;flex-direction:column;z-index:10}
 .s-logo{padding:18px 16px 14px;border-bottom:1px solid rgba(255,255,255,.12)}
-.s-logo img{height:42px;object-fit:contain;max-width:180px}
+.s-logo img{height:42px;object-fit:contain;max-width:180px;filter:brightness(0) invert(1)}
 .s-nav{flex:1;padding:14px 10px;overflow-y:auto}
 .nav-sec{margin-bottom:20px}
 .nav-lbl{font-size:9.5px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1.2px;padding:0 12px;margin-bottom:6px}
