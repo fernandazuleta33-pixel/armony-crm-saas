@@ -103,7 +103,7 @@ function nav(id) {
   document.querySelectorAll('.ni').forEach(n => {
     if ((n.getAttribute('onclick') || '').includes(`'${id}'`)) n.classList.add('active')
   })
-  const loaders = { dashboard: loadDashboard, leads: loadLeads, agenda: renderCal, instalaciones: loadInstalaciones, recordatorios: loadRecordatorios, reportes: loadReportes, asesores: loadAsesores }
+  const loaders = { dashboard: loadDashboard, leads: loadLeads, agenda: renderCal, instalaciones: loadInstalaciones, recordatorios: loadRecordatorios, reportes: loadReportes, asesores: loadAsesores, usuarios: loadUsuarios }
   if (loaders[id]) loaders[id]()
 }
 
@@ -723,6 +723,85 @@ async function deleteAsesor() {
 }
 
 // ═══════════════════════════════════════════
+// USUARIOS
+// ═══════════════════════════════════════════
+async function loadUsuarios() {
+  if (!document.body.classList.contains('is-admin')) {
+    document.getElementById('usuarios-content').innerHTML = '<div class="empty"><div class="empty-icon">🔒</div>Solo administradores</div>'
+    return
+  }
+  document.getElementById('usuarios-content').innerHTML = '<div class="loading-row"><span class="spinner"></span></div>'
+  const { data: usuarios, error } = await sb.from('usuarios').select('*').eq('empresa_id', empresaId).order('created_at')
+  if (error) { toast('Error cargando usuarios: ' + error.message, 'var(--red)'); return }
+
+  const html = (usuarios || []).map(u => `
+    <div class="asesor-card" style="display:flex;flex-direction:row;align-items:center;gap:14px;padding:14px 18px">
+      <div class="asesor-av" style="width:40px;height:40px;font-size:14px;flex-shrink:0">${(u.nombre || u.email || 'U').substring(0,2).toUpperCase()}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.nombre || '—'}</div>
+        <div style="font-size:12px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${u.email}</div>
+      </div>
+      <span class="sb ${u.rol === 'admin' ? 's-cerrado' : 's-proceso'}" style="flex-shrink:0">${u.rol === 'admin' ? 'Admin' : 'Usuario'}</span>
+      ${u.id !== currentUser?.id ? `<button class="btn btn-g" style="font-size:11px;padding:5px 10px;flex-shrink:0" onclick="toggleRolUsuario('${u.id}','${u.rol}','${u.nombre || u.email}')">${u.rol === 'admin' ? '→ Usuario' : '→ Admin'}</button>` : '<span style="font-size:11px;color:var(--text3)">Tú</span>'}
+    </div>
+  `).join('')
+
+  document.getElementById('usuarios-content').innerHTML = html || '<div style="color:var(--text3);padding:20px">No hay usuarios</div>'
+}
+
+async function toggleRolUsuario(id, rolActual, nombre) {
+  const nuevoRol = rolActual === 'admin' ? 'asesor' : 'admin'
+  if (!confirm(`¿Cambiar rol de "${nombre}" a ${nuevoRol}?`)) return
+  const { error } = await sb.from('usuarios').update({ rol: nuevoRol }).eq('id', id)
+  if (error) { toast('Error: ' + error.message, 'var(--red)'); return }
+  toast(`✓ Rol actualizado a ${nuevoRol}`)
+  loadUsuarios()
+}
+
+async function invitarUsuario(e) {
+  e.preventDefault()
+  if (!document.body.classList.contains('is-admin')) { toast('Solo administradores', 'var(--red)'); return }
+  const fd = new FormData(e.target); const body = Object.fromEntries(fd)
+  const btn = document.getElementById('btn-invitar')
+  btn.disabled = true; btn.textContent = 'Creando...'
+
+  try {
+    // Crear usuario en Supabase Auth
+    const { data, error } = await sb.auth.admin?.createUser({
+      email: body.email, password: body.password, email_confirm: true
+    })
+
+    // Si no tenemos acceso a admin API, usar signUp normal
+    if (error || !sb.auth.admin) {
+      // Registrar via signUp desde el cliente — Supabase enviará email de confirmación
+      const { data: signUpData, error: signUpError } = await sb.auth.signUp({
+        email: body.email,
+        password: body.password,
+        options: { data: { empresa_id: empresaId } }
+      })
+      if (signUpError) throw signUpError
+
+      const newUserId = signUpData.user?.id
+      if (newUserId) {
+        await sb.from('usuarios').insert([{
+          id: newUserId, email: body.email,
+          empresa_id: empresaId, rol: body.rol || 'asesor', nombre: body.nombre
+        }])
+      }
+    }
+
+    toast('✓ Usuario creado — recibirá un correo de confirmación')
+    closeModal('m-invitar')
+    e.target.reset()
+    loadUsuarios()
+  } catch (err) {
+    toast('Error: ' + err.message, 'var(--red)')
+  } finally {
+    btn.disabled = false; btn.textContent = '✉️ Crear usuario'
+  }
+}
+
+// ═══════════════════════════════════════════
 // WHATSAPP
 // ═══════════════════════════════════════════
 function sendWA(telefono, asesor, cliente) {
@@ -764,4 +843,7 @@ window.submitAsesor = submitAsesor
 window.openEditAsesor = openEditAsesor
 window.submitEditAsesor = submitEditAsesor
 window.deleteAsesor = deleteAsesor
+window.loadUsuarios = loadUsuarios
+window.toggleRolUsuario = toggleRolUsuario
+window.invitarUsuario = invitarUsuario
 window.sendWA = sendWA
