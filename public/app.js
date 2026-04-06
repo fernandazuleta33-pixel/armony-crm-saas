@@ -184,7 +184,11 @@ async function fetchClientes(filters = {}) {
   if (filters.estado && filters.estado !== 'todos') q = q.eq('estado', filters.estado)
   if (filters.buscar) q = q.or(`nombre.ilike.%${filters.buscar}%,telefono.ilike.%${filters.buscar}%`)
   q = q.order('created_at', { ascending: false })
-  const { data } = await q
+ const { data, error } = await q
+if (error) {
+  console.error('Supabase error en fetchClientes:', error)
+  return []
+}
   return (data || []).map(c => ({
     ...c,
     productos: (c.cliente_productos || []).map(p => p.producto),
@@ -285,6 +289,10 @@ async function loadDashboard() {
 // LEADS / CLIENTES
 // ═══════════════════════════════════════════
 async function loadLeads() {
+  if (!empresaId) {
+    console.error('empresaId es null — usuario sin empresa asignada')
+    return
+  }
   document.getElementById('leads-body').innerHTML = '<div class="loading-row"><span class="spinner"></span></div>'
   const data = await fetchClientes({ estado: currentEstado, buscar: currentSearch })
   renderLeadsTable(data)
