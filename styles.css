@@ -1,7 +1,0 @@
-body{font-family:sans-serif;background:#0f172a;color:white;margin:0}
-#auth{text-align:center;margin-top:100px}
-input,button{margin:5px;padding:10px;border-radius:8px;border:none}
-button{background:#22c55e;color:white;cursor:pointer}
-.topbar{display:flex;justify-content:space-between;padding:10px;background:#020617}
-.grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:20px}
-.card{background:#020617;padding:20px;border-radius:12px}
