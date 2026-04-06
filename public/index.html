@@ -45,6 +45,7 @@
     <div class="nav-sec admin-only">
       <div class="nav-lbl">Administración</div>
       <div class="ni" onclick="nav('asesores')"><span class="ic">🎯</span>Asesores</div>
+      <div class="ni" onclick="nav('usuarios')"><span class="ic">👤</span>Usuarios</div>
     </div>
   </nav>
   <div class="s-user" onclick="logout()">
@@ -163,6 +164,19 @@
     <button class="btn btn-p admin-only" onclick="openModal('m-asesor')">+ Nuevo asesor</button>
   </div>
   <div style="padding:28px 0 0"><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px" id="asesor-cards"></div></div>
+</div>
+
+<!-- USUARIOS -->
+<div class="page" id="page-usuarios">
+  <div class="topbar">
+    <div class="tb-title">Usuarios del sistema</div>
+    <button class="btn btn-p admin-only" onclick="openModal('m-invitar')">+ Invitar usuario</button>
+  </div>
+  <div style="padding:28px 0 0">
+    <div style="max-width:600px;display:flex;flex-direction:column;gap:10px" id="usuarios-content">
+      <div class="loading-row"><span class="spinner"></span></div>
+    </div>
+  </div>
 </div>
 
 </main>
@@ -354,6 +368,37 @@
     <button type="button" class="btn btn-red admin-only" onclick="deleteAsesor()">🗑 Desactivar</button>
     <button type="button" class="btn btn-g" onclick="closeModal('m-edit-asesor')">Cancelar</button>
     <button type="submit" class="btn btn-p">💾 Guardar cambios</button>
+  </div>
+  </form>
+</div>
+</div>
+
+<!-- INVITAR USUARIO -->
+<div class="overlay" id="m-invitar">
+<div class="modal" style="max-width:440px">
+  <button class="modal-close" onclick="closeModal('m-invitar')">✕</button>
+  <div class="modal-title">Invitar usuario</div>
+  <div class="modal-sub">El usuario podrá acceder al CRM de tu empresa</div>
+  <form onsubmit="invitarUsuario(event)">
+  <div class="fg">
+    <div class="fgroup full"><label class="flbl">Nombre completo *</label><input class="fi" name="nombre" required placeholder="Ej: Carolina Reyes"></div>
+    <div class="fgroup full"><label class="flbl">Email *</label><input class="fi" type="email" name="email" required placeholder="correo@empresa.com"></div>
+    <div class="fgroup full"><label class="flbl">Contraseña temporal *</label><input class="fi" type="password" name="password" required placeholder="Mínimo 6 caracteres" minlength="6"></div>
+    <div class="fgroup full"><label class="flbl">Rol</label>
+      <select class="fi fi-sel" name="rol">
+        <option value="asesor">Asesor — solo ve sus clientes asignados</option>
+        <option value="admin">Administrador — acceso completo</option>
+      </select>
+    </div>
+    <div class="fgroup full">
+      <div style="background:var(--surface2);border-radius:var(--rs);padding:12px 14px;font-size:12.5px;color:var(--text2)">
+        💡 El usuario podrá iniciar sesión con este email y contraseña. Recomiéndale cambiar la contraseña después de entrar.
+      </div>
+    </div>
+  </div>
+  <div class="mfooter">
+    <button type="button" class="btn btn-g" onclick="closeModal('m-invitar')">Cancelar</button>
+    <button type="submit" class="btn btn-p" id="btn-invitar">✉️ Crear usuario</button>
   </div>
   </form>
 </div>
