@@ -847,3 +847,140 @@ window.loadUsuarios = loadUsuarios
 window.toggleRolUsuario = toggleRolUsuario
 window.invitarUsuario = invitarUsuario
 window.sendWA = sendWA
+// ═══════════════════════════════════════════
+// EXPORTAR DASHBOARD A EXCEL
+// ═══════════════════════════════════════════
+async function exportarDashboardExcel() {
+  try {
+    toast('Generando informe...', 'var(--wine)')
+
+    const [clientesRes, visitasRes, prodsRes] = await Promise.all([
+      sb.from('clientes').select('*, asesores(nombre)').eq('empresa_id', empresaId),
+      sb.from('visitas').select('*, clientes(nombre)').eq('empresa_id', empresaId),
+      sb.from('cliente_productos').select('producto, cliente_id')
+    ])
+
+    const clientes = clientesRes.data || []
+    const visitas = visitasRes.data || []
+    const prods = prodsRes.data || []
+
+    const now = new Date()
+    const mes = String(now.getMonth() + 1).padStart(2, '0')
+    const anio = String(now.getFullYear())
+    const hoy = now.toISOString().split('T')[0]
+    const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+    // ── Hoja 1: Resumen general ──
+    const cerradosMes = clientes.filter(c => c.estado === 'cerrado' && c.created_at?.startsWith(`${anio}-${mes}`)).length
+    const leadsDelMes = clientes.filter(c => c.created_at?.startsWith(`${anio}-${mes}`)).length
+    const conversion = leadsDelMes > 0 ? Math.round(cerradosMes / leadsDelMes * 100) : 0
+    const visitasHoy = visitas.filter(v => v.fecha === hoy).length
+    const weekEnd = new Date(); weekEnd.setDate(weekEnd.getDate() + 7)
+    const visitasSem = visitas.filter(v => v.fecha >= hoy && v.fecha <= weekEnd.toISOString().split('T')[0]).length
+
+    const resumen = [
+      ['INFORME DASHBOARD — HORIZONTE CORTINAS Y PERSIANAS'],
+      ['Generado:', new Date().toLocaleString('es-CO')],
+      [],
+      ['MÉTRICAS DEL MES', ''],
+      ['Leads este mes', leadsDelMes],
+      ['Cierres del mes', cerradosMes],
+      ['Tasa de conversión', `${conversion}%`],
+      ['Visitas esta semana', visitasSem],
+      ['Visitas hoy', visitasHoy],
+      ['Total clientes', clientes.length],
+    ]
+
+    // ── Hoja 2: Leads por mes (últimos 6) ──
+    const leadsPorMes = Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(); d.setMonth(d.getMonth() - 5 + i)
+      const mm = String(d.getMonth() + 1).padStart(2, '0')
+      const yy = String(d.getFullYear())
+      const n = clientes.filter(c => c.created_at?.startsWith(`${yy}-${mm}`)).length
+      return [`${meses[d.getMonth()]} ${yy}`, n]
+    })
+    const hLeadsMes = [['Mes', 'Cantidad de Leads'], ...leadsPorMes]
+
+    // ── Hoja 3: Embudo por estado ──
+    const estados = ['nuevo','proceso','cotizado','cerrado','perdido']
+    const labels = { nuevo:'Nuevos', proceso:'En proceso', cotizado:'Cotizados', cerrado:'Cerrados', perdido:'Perdidos' }
+    const total = clientes.length || 1
+    const hEmbudo = [
+      ['Estado', 'Cantidad', '% del Total'],
+      ...estados.map(e => {
+        const n = clientes.filter(c => c.estado === e).length
+        return [labels[e], n, `${Math.round(n / total * 100)}%`]
+      })
+    ]
+
+    // ── Hoja 4: Top productos ──
+    const prodCount = {}
+    prods.forEach(p => { prodCount[p.producto] = (prodCount[p.producto] || 0) + 1 })
+    const topProds = Object.entries(prodCount).sort((a, b) => b[1] - a[1])
+    const hProds = [['Producto', 'Cantidad de Clientes'], ...topProds]
+
+    // ── Hoja 5: Listado completo de clientes ──
+    const hClientes = [
+      ['Nombre', 'Teléfono', 'Dirección', 'Estado', 'Asesor', 'Fecha Registro'],
+      ...clientes.map(c => [
+        c.nombre || '',
+        c.telefono || '',
+        c.direccion || '',
+        labels[c.estado] || c.estado || '',
+        c.asesores?.nombre || '',
+        c.created_at ? new Date(c.created_at).toLocaleDateString('es-CO') : ''
+      ])
+    ]
+
+    // ── Hoja 6: Visitas ──
+    const hVisitas = [
+      ['Cliente', 'Fecha', 'Hora', 'Tipo', 'Estado', 'Notas'],
+      ...visitas.map(v => [
+        v.clientes?.nombre || '',
+        v.fecha || '',
+        v.hora || '',
+        v.tipo || '',
+        v.estado || '',
+        v.notas || ''
+      ])
+    ]
+
+    // ── Construir workbook con SheetJS ──
+    const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.1/package/xlsx.mjs')
+    const wb = XLSX.utils.book_new()
+
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumen)
+    wsResumen['!cols'] = [{ wch: 30 }, { wch: 20 }]
+    XLSX.utils.book_append_sheet(wb, wsResumen, 'Resumen')
+
+    const wsLeadsMes = XLSX.utils.aoa_to_sheet(hLeadsMes)
+    wsLeadsMes['!cols'] = [{ wch: 16 }, { wch: 20 }]
+    XLSX.utils.book_append_sheet(wb, wsLeadsMes, 'Leads por Mes')
+
+    const wsEmbudo = XLSX.utils.aoa_to_sheet(hEmbudo)
+    wsEmbudo['!cols'] = [{ wch: 16 }, { wch: 12 }, { wch: 14 }]
+    XLSX.utils.book_append_sheet(wb, wsEmbudo, 'Embudo de Ventas')
+
+    const wsProds = XLSX.utils.aoa_to_sheet(hProds)
+    wsProds['!cols'] = [{ wch: 30 }, { wch: 22 }]
+    XLSX.utils.book_append_sheet(wb, wsProds, 'Top Productos')
+
+    const wsClientes = XLSX.utils.aoa_to_sheet(hClientes)
+    wsClientes['!cols'] = [{ wch: 28 }, { wch: 16 }, { wch: 32 }, { wch: 14 }, { wch: 20 }, { wch: 18 }]
+    XLSX.utils.book_append_sheet(wb, wsClientes, 'Clientes')
+
+    const wsVisitas = XLSX.utils.aoa_to_sheet(hVisitas)
+    wsVisitas['!cols'] = [{ wch: 28 }, { wch: 14 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 30 }]
+    XLSX.utils.book_append_sheet(wb, wsVisitas, 'Visitas')
+
+    const fecha = now.toISOString().split('T')[0]
+    XLSX.writeFile(wb, `Horizonte_Dashboard_${fecha}.xlsx`)
+    toast('✅ Informe descargado', 'var(--green)')
+
+  } catch (e) {
+    console.error(e)
+    toast('Error al exportar: ' + e.message, 'var(--red)')
+  }
+}
+
+window.exportarDashboardExcel = exportarDashboardExcel
